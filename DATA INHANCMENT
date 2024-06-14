@@ -1,0 +1,63 @@
+import pandas as pd
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+
+# Load your datasets (replace with actual file paths)
+df1 = pd.read_csv('data.csv')
+df2 = pd.read_csv('missing_value.csv')
+
+# Transpose the dataframes to switch rows and columns
+df1_t = df1.T
+df2_t = df2.T
+
+# Check for missing values
+missing_columns = df2_t.columns[df2_t.isnull().any()]
+if missing_columns.empty:
+    print("No missing values found.")
+else:
+    print("Columns with missing values:", missing_columns)
+
+    # Initialize the DecisionTreeRegressor model
+    regressor = DecisionTreeRegressor()
+
+    # Iterate over each column with missing values
+    for col in missing_columns:
+        missing_indices = df2_t[col].isnull()
+        # Check if there are any samples with complete data
+        if not missing_indices.all():
+            # Fit the model on rows with complete data
+            regressor.fit(df1_t[~missing_indices], df2_t[col][~missing_indices])
+            # Predict missing values
+            df2_t[col][missing_indices] = regressor.predict(df1_t[missing_indices])
+        else:
+            print("No complete data found for column:", col)
+
+# Transpose back to the original orientation
+df2_imputed = df2_t.T
+
+# Ensure the columns and index are in the correct order after transposition
+df2_imputed.columns = df2.columns
+df2_imputed.index = df2.index
+
+# Round the values in the imputed DataFrame to not show decimal places
+df2_imputed = df2_imputed.round(0)  # Change the argument to adjust decimal places
+
+# Measure the performance for continuous data
+mse = mean_squared_error(df1, df2_imputed)
+mae = mean_absolute_error(df1, df2_imputed)
+r2 = r2_score(df1.values.flatten(), df2_imputed.values.flatten())
+
+print("\nMean Squared Error:", mse)
+print("Mean Absolute Error:", mae)
+print("R-squared (coefficient of determination):", r2)
+
+# Print the original, missing, and imputed dataframes
+print("\nOriginal DataFrame (df1):")
+print(df1)
+
+print("\nDataFrame with Missing Values (df2):")
+print(df2)
+
+print("\nImputed DataFrame (df2_imputed):")
+print(df2_imputed)
+
